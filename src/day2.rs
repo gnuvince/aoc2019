@@ -35,9 +35,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     for line in stdin.lines() {
         let line = line?;
-        let instr: Vec<usize> = line
+        let instr: Vec<i64> = line
             .split(',')
-            .map(|x| x.parse::<usize>().unwrap())
+            .map(|x| x.parse::<i64>().unwrap())
             .collect();
 
         // part1
