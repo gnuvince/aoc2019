@@ -21,7 +21,17 @@ impl Mode {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Op { Stop, Add, Mul, In, Out }
+enum Op {
+    Stop,
+    Add,
+    Mul,
+    In,
+    Out,
+    JmpIfTrue,
+    JmpIfFalse,
+    Lt,
+    Eq,
+}
 
 impl Op {
     fn from_i64(n: i64) -> Op {
@@ -30,6 +40,10 @@ impl Op {
             2 => Op::Mul,
             3 => Op::In,
             4 => Op::Out,
+            5 => Op::JmpIfTrue,
+            6 => Op::JmpIfFalse,
+            7 => Op::Lt,
+            8 => Op::Eq,
             99 => Op::Stop,
             x => panic!("unknown opcode: {}", x)
         }
@@ -76,6 +90,36 @@ pub fn exec_intcode(instr: &mut [i64]) {
                 let x = fetch(pc+1, modes[0], instr);
                 println!("{}", x);
                 pc += 2;
+            }
+            Op::JmpIfTrue => {
+                let x = fetch(pc+1, modes[0], instr);
+                let new_pc = fetch(pc+2, modes[1], instr);
+                if x != 0 {
+                    pc = new_pc as usize;
+                } else {
+                    pc += 3;
+                }
+            }
+            Op::JmpIfFalse => {
+                let x = fetch(pc+1, modes[0], instr);
+                let new_pc = fetch(pc+2, modes[1], instr);
+                if x == 0 {
+                    pc = new_pc as usize;
+                } else {
+                    pc += 3;
+                }
+            }
+            Op::Lt => {
+                let x = fetch(pc+1, modes[0], instr);
+                let y = fetch(pc+2, modes[1], instr);
+                instr[instr[pc+3] as usize] = (x < y) as i64;
+                pc += 4;
+            }
+            Op::Eq => {
+                let x = fetch(pc+1, modes[0], instr);
+                let y = fetch(pc+2, modes[1], instr);
+                instr[instr[pc+3] as usize] = (x == y) as i64;
+                pc += 4;
             }
             Op::Stop => break,
         }

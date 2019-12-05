@@ -16,6 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut buf = String::new();
     stdin.read_line(&mut buf)?;
     let mut instr: Vec<i64> = buf
+        .trim()
         .split(',')
         .filter_map(|x| x.parse::<i64>().ok())
         .collect();
