@@ -1,5 +1,3 @@
-use std::io;
-
 #[derive(Debug, Clone, Copy)]
 enum Mode { Pos, Imm }
 
@@ -58,8 +56,9 @@ fn fetch(pc: usize, mode: Mode, instr: &[i64]) -> i64 {
 }
 
 
-pub fn exec_intcode(instr: &mut [i64]) {
+pub fn exec_intcode(instr: &mut [i64], inputs: &[i64], outputs: &mut Vec<i64>) {
     let mut pc: usize = 0;
+    let mut ic: usize = 0; // input counter
 
     loop {
         let op = Op::from_i64(instr[pc]);
@@ -79,16 +78,13 @@ pub fn exec_intcode(instr: &mut [i64]) {
             }
             Op::In => {
                 let out_addr = instr[pc+1] as usize;
-                let stdin = io::stdin();
-                let mut buf = String::new();
-                stdin.read_line(&mut buf).expect("cannot read line");
-                let buf = buf.trim();
-                instr[out_addr] = buf.parse::<i64>().unwrap();
+                instr[out_addr] = inputs[ic];
+                ic += 1;
                 pc += 2;
             }
             Op::Out => {
                 let x = fetch(pc+1, modes[0], instr);
-                println!("{}", x);
+                outputs.push(x);
                 pc += 2;
             }
             Op::JmpIfTrue => {

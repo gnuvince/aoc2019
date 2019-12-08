@@ -4,27 +4,29 @@ use aoc2019::exec_intcode;
 
 #[test]
 fn test_p1() {
+    let inputs = vec![];
+    let mut outputs = vec![];
     assert!({
         let mut instr = vec![1,0,0,0,99];
-        exec_intcode(&mut instr);
+        exec_intcode(&mut instr, &inputs, &mut outputs);
         instr == vec![2,0,0,0,99]
     });
 
     assert!({
         let mut instr = vec![2,3,0,3,99];
-        exec_intcode(&mut instr);
+        exec_intcode(&mut instr, &inputs, &mut outputs);
         instr == vec![2,3,0,6,99]
     });
 
     assert!({
         let mut instr = vec![2,4,4,5,99,0];
-        exec_intcode(&mut instr);
+        exec_intcode(&mut instr, &inputs, &mut outputs);
         instr == vec![2,4,4,5,99,9801]
     });
 
     assert!({
         let mut instr = vec![1,1,1,4,99,5,6,0,99];
-        exec_intcode(&mut instr);
+        exec_intcode(&mut instr, &inputs, &mut outputs);
         instr == vec![30,1,1,4,2,5,6,0,99]
     });
 }
@@ -45,7 +47,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             let mut p1_instr = instr.clone();
             p1_instr[1] = 12;
             p1_instr[2] = 2;
-            exec_intcode(&mut p1_instr);
+            let inputs = vec![];
+            let mut outputs = vec![];
+            exec_intcode(&mut p1_instr, &inputs, &mut outputs);
             println!("{}", p1_instr[0]);
         }
 
@@ -55,7 +59,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let mut p2_instr = instr.clone();
                 p2_instr[1] = noun;
                 p2_instr[2] = verb;
-                exec_intcode(&mut p2_instr);
+                let inputs = vec![];
+                let mut outputs = vec![];
+                exec_intcode(&mut p2_instr, &inputs, &mut outputs);
                 if p2_instr[0] == 19690720 {
                     println!("{}", 100*noun + verb);
                     return Ok(());
