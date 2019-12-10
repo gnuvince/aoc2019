@@ -2,9 +2,9 @@ use std::io;
 
 #[derive(Debug)]
 pub struct Cpu {
-    pub pc: i64,                // program counter
-    pub ic: i64,                // input counter
-    pub rb: i64,                // relative base
+    pub pc: usize,                // program counter
+    pub ic: usize,                // input counter
+    pub rb: usize,                // relative base
     pub memory: Vec<i64>,       // memory (instructions & data)
     pub inputs: Vec<i64>,       // inputs, indexed by ic
     pub outputs: Vec<i64>,      // outputs
@@ -29,18 +29,18 @@ impl Cpu {
         };
     }
 
-    fn fetch(&self, addr: i64, mode: Mode) -> i64 {
+    fn fetch(&self, addr: usize, mode: Mode) -> i64 {
         match mode {
-            Mode::Pos => self.memory[self.memory[addr as usize] as usize],
-            Mode::Imm => self.memory[addr as usize],
+            Mode::Pos => self.memory[self.memory[addr] as usize],
+            Mode::Imm => self.memory[addr],
             Mode::Rel => {
-                let off = self.memory[addr as usize];
-                self.memory[(self.rb + off) as usize]
+                let actual_addr = (self.rb as i64 + self.memory[addr]) as usize;
+                self.memory[actual_addr]
             }
         }
     }
 
-    fn store(&mut self, addr: i64, val: i64, mode: Mode) {
+    fn store(&mut self, addr: usize, val: i64, mode: Mode) {
         match mode {
             Mode::Pos => {
                 let x = self.memory[addr as usize] as usize;
@@ -48,8 +48,8 @@ impl Cpu {
             }
             Mode::Imm => panic!("cannot write in immediate mode"),
             Mode::Rel => {
-                let off = self.memory[addr as usize];
-                self.memory[(self.rb + off) as usize] = val;
+                let actual_addr = (self.rb as i64 + self.memory[addr as usize]) as usize;
+                self.memory[actual_addr] = val;
             }
         }
     }
@@ -61,8 +61,8 @@ impl Cpu {
     }
 
     pub fn step(&mut self) {
-        let op = Op::from_i64(self.memory[self.pc as usize]);
-        let modes = Mode::from_i64(self.memory[self.pc as usize]);
+        let op = Op::from_i64(self.memory[self.pc]);
+        let modes = Mode::from_i64(self.memory[self.pc]);
         match op {
             Op::Add => {
                 let x = self.fetch(self.pc+1, modes[0]);
@@ -90,7 +90,7 @@ impl Cpu {
                 let x = self.fetch(self.pc+1, modes[0]);
                 let new_pc = self.fetch(self.pc+2, modes[1]);
                 if x != 0 {
-                    self.pc = new_pc;
+                    self.pc = new_pc as usize;
                 } else {
                     self.pc += 3;
                 }
@@ -99,7 +99,7 @@ impl Cpu {
                 let x = self.fetch(self.pc+1, modes[0]);
                 let new_pc = self.fetch(self.pc+2, modes[1]);
                 if x == 0 {
-                    self.pc = new_pc;
+                    self.pc = new_pc as usize;
                 } else {
                     self.pc += 3;
                 }
@@ -118,7 +118,7 @@ impl Cpu {
             }
             Op::SetRb => {
                 let incr = self.fetch(self.pc+1, modes[0]);
-                self.rb += incr;
+                self.rb = (self.rb as i64 + incr) as usize;
                 self.pc += 2;
             }
             Op::Stop => (),
