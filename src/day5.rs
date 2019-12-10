@@ -6,7 +6,7 @@ use aoc2019::*;
 fn test_modes() {
     let mut cpu = Cpu::new(vec![1002,4,3,4,33]);
     cpu.run();
-    assert_eq!(cpu.instructions[4], 99);
+    assert_eq!(cpu.memory[4], 99);
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
