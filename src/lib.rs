@@ -10,7 +10,12 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(memory: Vec<i64>) -> Cpu {
+    pub fn new(instructions: Vec<i64>) -> Cpu {
+        let mut memory = vec![0_i64; 65536];
+        for (i, instr) in instructions.into_iter().enumerate() {
+            memory[i] = instr;
+        }
+
         return Cpu {
             pc: 0,
             ic: 0,
