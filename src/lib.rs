@@ -183,18 +183,18 @@ impl Op {
 }
 
 
-pub fn read_program() -> Vec<i64> {
+pub fn read_program() -> io::Result<Vec<i64>> {
     let instr: Vec<i64> = {
         let stdin = io::stdin();
         let mut buf = String::new();
-        stdin.read_line(&mut buf).unwrap();
+        stdin.read_line(&mut buf)?;
         buf
             .trim()
             .split(',')
             .map(|x| x.parse::<i64>().unwrap())
             .collect()
     };
-    return instr;
+    return Ok(instr);
 }
 
 #[test]

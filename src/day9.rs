@@ -24,7 +24,7 @@ fn test_p1() {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let instr = read_program();
+    let instr = read_program()?;
 
     // Part 1
     {
