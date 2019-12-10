@@ -1,4 +1,4 @@
-use aoc2019::exec_intcode;
+use aoc2019::*;
 use permutohedron::heap_recursive;
 use std::error::Error;
 use std::io;
@@ -27,11 +27,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         for config in all_phase_configs {
             let mut next_input = 0;
             for phase in config {
-                let mut curr_instr = instr.clone();
-                let input = vec![phase, next_input];
-                let mut output = vec![];
-                exec_intcode(&mut curr_instr, &input, &mut output);
-                next_input = output[0];
+                let mut cpu = Cpu::new(instr.clone());
+                cpu.inputs = vec![phase, next_input];
+                cpu.run();
+                next_input = cpu.outputs[0];
             }
 
             if next_input > best_output {

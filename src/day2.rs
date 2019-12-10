@@ -1,33 +1,31 @@
 use std::error::Error;
 use std::io::{self, BufRead};
-use aoc2019::exec_intcode;
+use aoc2019::*;
 
 #[test]
 fn test_p1() {
-    let inputs = vec![];
-    let mut outputs = vec![];
     assert!({
-        let mut instr = vec![1,0,0,0,99];
-        exec_intcode(&mut instr, &inputs, &mut outputs);
-        instr == vec![2,0,0,0,99]
+        let mut cpu = Cpu::new(vec![1,0,0,0,99]);
+        cpu.run();
+        cpu.instructions == vec![2,0,0,0,99]
     });
 
     assert!({
-        let mut instr = vec![2,3,0,3,99];
-        exec_intcode(&mut instr, &inputs, &mut outputs);
-        instr == vec![2,3,0,6,99]
+        let mut cpu = Cpu::new(vec![2,3,0,3,99]);
+        cpu.run();
+        cpu.instructions == vec![2,3,0,6,99]
     });
 
     assert!({
-        let mut instr = vec![2,4,4,5,99,0];
-        exec_intcode(&mut instr, &inputs, &mut outputs);
-        instr == vec![2,4,4,5,99,9801]
+        let mut cpu = Cpu::new(vec![2,4,4,5,99,0]);
+        cpu.run();
+        cpu.instructions == vec![2,4,4,5,99,9801]
     });
 
     assert!({
-        let mut instr = vec![1,1,1,4,99,5,6,0,99];
-        exec_intcode(&mut instr, &inputs, &mut outputs);
-        instr == vec![30,1,1,4,2,5,6,0,99]
+        let mut cpu = Cpu::new(vec![1,1,1,4,99,5,6,0,99]);
+        cpu.run();
+        cpu.instructions == vec![30,1,1,4,2,5,6,0,99]
     });
 }
 
@@ -44,25 +42,21 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // part1
         {
-            let mut p1_instr = instr.clone();
-            p1_instr[1] = 12;
-            p1_instr[2] = 2;
-            let inputs = vec![];
-            let mut outputs = vec![];
-            exec_intcode(&mut p1_instr, &inputs, &mut outputs);
-            println!("{}", p1_instr[0]);
+            let mut cpu = Cpu::new(instr.clone());
+            cpu.instructions[1] = 12;
+            cpu.instructions[2] = 2;
+            cpu.run();
+            println!("{}", cpu.instructions[0]);
         }
 
         // part2
         for noun in 0 .. 100 {
             for verb in 0 .. 100 {
-                let mut p2_instr = instr.clone();
-                p2_instr[1] = noun;
-                p2_instr[2] = verb;
-                let inputs = vec![];
-                let mut outputs = vec![];
-                exec_intcode(&mut p2_instr, &inputs, &mut outputs);
-                if p2_instr[0] == 19690720 {
+                let mut cpu = Cpu::new(instr.clone());
+                cpu.instructions[1] = noun;
+                cpu.instructions[2] = verb;
+                cpu.run();
+                if cpu.instructions[0] == 19690720 {
                     println!("{}", 100*noun + verb);
                     return Ok(());
                 }

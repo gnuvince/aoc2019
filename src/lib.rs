@@ -9,22 +9,22 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(instructions: Vec<i64>, inputs: Vec<i64>) -> Cpu {
+    pub fn new(instructions: Vec<i64>) -> Cpu {
         return Cpu {
             pc: 0,
             ic: 0,
             rb: 0,
             instructions: instructions,
-            inputs: inputs,
+            inputs: Vec::new(),
             outputs: Vec::new(),
             last_op: Op::Boot,
         };
     }
 
-    fn fetch(&self, mode: Mode) -> i64 {
+    fn fetch(&self, addr: usize, mode: Mode) -> i64 {
         match mode {
-            Mode::Pos => self.instructions[self.instructions[self.pc] as usize],
-            Mode::Imm => self.instructions[self.pc],
+            Mode::Pos => self.instructions[self.instructions[addr] as usize],
+            Mode::Imm => self.instructions[addr],
         }
     }
 
@@ -44,31 +44,30 @@ impl Cpu {
         let modes = Mode::from_i64(self.instructions[self.pc]);
         match op {
             Op::Add => {
-                let x = self.fetch(modes[0]);
-                let y = self.fetch(modes[1]);
+                let x = self.fetch(self.pc+1, modes[0]);
+                let y = self.fetch(self.pc+2, modes[1]);
                 self.store(self.pc+3, x+y);
                 self.pc += 4;
             }
             Op::Mul => {
-                let x = self.fetch(modes[0]);
-                let y = self.fetch(modes[1]);
+                let x = self.fetch(self.pc+1, modes[0]);
+                let y = self.fetch(self.pc+2, modes[1]);
                 self.store(self.pc+3, x*y);
                 self.pc += 4;
             }
             Op::In => {
-                let out_addr = self.instructions[self.pc+1] as usize;
-                self.instructions[out_addr] = self.inputs[self.ic];
+                self.store(self.pc+1, self.inputs[self.ic]);
                 self.ic += 1;
                 self.pc += 2;
             }
             Op::Out => {
-                let x = self.fetch(modes[0]);
+                let x = self.fetch(self.pc+1, modes[0]);
                 self.outputs.push(x);
                 self.pc += 2;
             }
             Op::JmpIfTrue => {
-                let x = self.fetch(modes[0]);
-                let new_pc = self.fetch(modes[1]);
+                let x = self.fetch(self.pc+1, modes[0]);
+                let new_pc = self.fetch(self.pc+2, modes[1]);
                 if x != 0 {
                     self.pc = new_pc as usize;
                 } else {
@@ -76,8 +75,8 @@ impl Cpu {
                 }
             }
             Op::JmpIfFalse => {
-                let x = self.fetch(modes[0]);
-                let new_pc = self.fetch(modes[1]);
+                let x = self.fetch(self.pc+1, modes[0]);
+                let new_pc = self.fetch(self.pc+2, modes[1]);
                 if x == 0 {
                     self.pc = new_pc as usize;
                 } else {
@@ -85,20 +84,21 @@ impl Cpu {
                 }
             }
             Op::Lt => {
-                let x = self.fetch(modes[0]);
-                let y = self.fetch(modes[1]);
+                let x = self.fetch(self.pc+1, modes[0]);
+                let y = self.fetch(self.pc+2, modes[1]);
                 self.store(self.pc+3, (x < y) as i64);
                 self.pc += 4;
             }
             Op::Eq => {
-                let x = self.fetch(modes[0]);
-                let y = self.fetch(modes[1]);
+                let x = self.fetch(self.pc+1, modes[0]);
+                let y = self.fetch(self.pc+2, modes[1]);
                 self.store(self.pc+3, (x == y) as i64);
                 self.pc += 4;
             }
             Op::SetRb => {
-                let incr = self.fetch(modes[0]);
+                let incr = self.fetch(self.pc+1, modes[0]);
                 self.rb += incr;
+                self.pc += 2;
             }
             Op::Stop => (),
             Op::Boot => panic!("should never execute Boot op"),
