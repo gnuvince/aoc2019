@@ -1,3 +1,5 @@
+use std::io;
+
 #[derive(Debug)]
 pub struct Cpu {
     pub pc: i64,                // program counter
@@ -31,7 +33,10 @@ impl Cpu {
         match mode {
             Mode::Pos => self.memory[self.memory[addr as usize] as usize],
             Mode::Imm => self.memory[addr as usize],
-            Mode::Rel => self.memory[(self.rb + addr) as usize],
+            Mode::Rel => {
+                let off = self.memory[addr as usize];
+                self.memory[(self.rb + off) as usize]
+            }
         }
     }
 
@@ -43,8 +48,8 @@ impl Cpu {
             }
             Mode::Imm => panic!("cannot write in immediate mode"),
             Mode::Rel => {
-                let x = self.memory[(self.rb + addr) as usize] as usize;
-                self.memory[x] = val;
+                let off = self.memory[addr as usize];
+                self.memory[(self.rb + off) as usize] = val;
             }
         }
     }
@@ -175,4 +180,27 @@ impl Op {
             x => panic!("unknown opcode: {}", x)
         }
     }
+}
+
+
+pub fn read_program() -> Vec<i64> {
+    let instr: Vec<i64> = {
+        let stdin = io::stdin();
+        let mut buf = String::new();
+        stdin.read_line(&mut buf).unwrap();
+        buf
+            .trim()
+            .split(',')
+            .map(|x| x.parse::<i64>().unwrap())
+            .collect()
+    };
+    return instr;
+}
+
+#[test]
+fn test_rel() {
+    let mut cpu = Cpu::new(vec![109, 7, 22201, 0, 1, 2, 99, 3, 4, 0]);
+    cpu.run();
+    println!("{:?}", &cpu.memory[..10]);
+    assert_eq!(cpu.memory[9], 7);
 }
