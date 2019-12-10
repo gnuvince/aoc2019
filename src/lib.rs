@@ -1,8 +1,9 @@
+#[derive(Debug)]
 pub struct Cpu {
     pub pc: i64,                // program counter
     pub ic: i64,                // input counter
     pub rb: i64,                // relative base
-    pub instructions: Vec<i64>, // instructions
+    pub memory: Vec<i64>,       // memory (instructions & data)
     pub inputs: Vec<i64>,       // inputs, indexed by ic
     pub outputs: Vec<i64>,      // outputs
     pub last_op: Op,            // last executed Op
@@ -10,11 +11,16 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn new(instructions: Vec<i64>) -> Cpu {
+        let mut memory = vec![0_i64; 65536];
+        for (i, instr) in instructions.into_iter().enumerate() {
+            memory[i] = instr;
+        }
+
         return Cpu {
             pc: 0,
             ic: 0,
             rb: 0,
-            instructions: instructions,
+            memory: memory,
             inputs: Vec::new(),
             outputs: Vec::new(),
             last_op: Op::Boot,
@@ -23,15 +29,24 @@ impl Cpu {
 
     fn fetch(&self, addr: i64, mode: Mode) -> i64 {
         match mode {
-            Mode::Pos => self.instructions[self.instructions[addr as usize] as usize],
-            Mode::Imm => self.instructions[addr as usize],
-            Mode::Rel => self.instructions[(self.rb + addr) as usize],
+            Mode::Pos => self.memory[self.memory[addr as usize] as usize],
+            Mode::Imm => self.memory[addr as usize],
+            Mode::Rel => self.memory[(self.rb + addr) as usize],
         }
     }
 
-    fn store(&mut self, addr: i64, val: i64) {
-        let x = self.instructions[addr as usize] as usize;
-        self.instructions[x] = val;
+    fn store(&mut self, addr: i64, val: i64, mode: Mode) {
+        match mode {
+            Mode::Pos => {
+                let x = self.memory[addr as usize] as usize;
+                self.memory[x] = val;
+            }
+            Mode::Imm => panic!("cannot write in immediate mode"),
+            Mode::Rel => {
+                let x = self.memory[(self.rb + addr) as usize] as usize;
+                self.memory[x] = val;
+            }
+        }
     }
 
     pub fn run(&mut self) {
@@ -41,23 +56,23 @@ impl Cpu {
     }
 
     pub fn step(&mut self) {
-        let op = Op::from_i64(self.instructions[self.pc as usize]);
-        let modes = Mode::from_i64(self.instructions[self.pc as usize]);
+        let op = Op::from_i64(self.memory[self.pc as usize]);
+        let modes = Mode::from_i64(self.memory[self.pc as usize]);
         match op {
             Op::Add => {
                 let x = self.fetch(self.pc+1, modes[0]);
                 let y = self.fetch(self.pc+2, modes[1]);
-                self.store(self.pc+3, x+y);
+                self.store(self.pc+3, x+y, modes[2]);
                 self.pc += 4;
             }
             Op::Mul => {
                 let x = self.fetch(self.pc+1, modes[0]);
                 let y = self.fetch(self.pc+2, modes[1]);
-                self.store(self.pc+3, x*y);
+                self.store(self.pc+3, x*y, modes[2]);
                 self.pc += 4;
             }
             Op::In => {
-                self.store(self.pc+1, self.inputs[self.ic as usize]);
+                self.store(self.pc+1, self.inputs[self.ic as usize], modes[0]);
                 self.ic += 1;
                 self.pc += 2;
             }
@@ -87,13 +102,13 @@ impl Cpu {
             Op::Lt => {
                 let x = self.fetch(self.pc+1, modes[0]);
                 let y = self.fetch(self.pc+2, modes[1]);
-                self.store(self.pc+3, (x < y) as i64);
+                self.store(self.pc+3, (x < y) as i64, modes[2]);
                 self.pc += 4;
             }
             Op::Eq => {
                 let x = self.fetch(self.pc+1, modes[0]);
                 let y = self.fetch(self.pc+2, modes[1]);
-                self.store(self.pc+3, (x == y) as i64);
+                self.store(self.pc+3, (x == y) as i64, modes[2]);
                 self.pc += 4;
             }
             Op::SetRb => {
