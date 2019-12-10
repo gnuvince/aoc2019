@@ -1,23 +1,19 @@
 use std::error::Error;
 use std::io;
-use aoc2019::exec_intcode;
+use aoc2019::*;
 
 #[test]
 fn test_modes() {
-    assert!({
-        let inputs = vec![];
-        let mut outputs = vec![];
-        let mut instr: Vec<i64> = vec![1002,4,3,4,33];
-        exec_intcode(&mut instr, &inputs, &mut outputs);
-        instr[4] == 99
-    });
+    let mut cpu = Cpu::new(vec![1002,4,3,4,33]);
+    cpu.run();
+    assert_eq!(cpu.instructions[4], 99);
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let stdin = io::stdin();
     let mut buf = String::new();
     stdin.read_line(&mut buf)?;
-    let mut instr: Vec<i64> = buf
+    let instr: Vec<i64> = buf
         .trim()
         .split(',')
         .filter_map(|x| x.parse::<i64>().ok())
@@ -25,19 +21,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Part 1
     {
-        let mut instr = instr.clone();
-        let inputs = vec![1];
-        let mut outputs = vec![];
-        exec_intcode(&mut instr, &inputs, &mut outputs);
-        println!("{:?}", outputs);
+        let mut cpu = Cpu::new(instr.clone());
+        cpu.inputs.push(1);
+        cpu.run();
+        println!("{:?}", cpu.outputs);
     }
 
     // Part 2
     {
-        let inputs = vec![5];
-        let mut outputs = vec![];
-        exec_intcode(&mut instr, &inputs, &mut outputs);
-        println!("{:?}", outputs);
+        let mut cpu = Cpu::new(instr);
+        cpu.inputs.push(5);
+        cpu.run();
+        println!("{:?}", cpu.outputs);
     }
 
     return Ok(());

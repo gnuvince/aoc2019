@@ -1,3 +1,112 @@
+pub struct Cpu {
+    pub pc: usize,              // program counter
+    pub ic: usize,              // input counter
+    pub rb: i64,                // relative base
+    pub instructions: Vec<i64>, // instructions
+    pub inputs: Vec<i64>,       // inputs, indexed by ic
+    pub outputs: Vec<i64>,      // outputs
+    pub last_op: Op,            // last executed Op
+}
+
+impl Cpu {
+    pub fn new(instructions: Vec<i64>) -> Cpu {
+        return Cpu {
+            pc: 0,
+            ic: 0,
+            rb: 0,
+            instructions: instructions,
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            last_op: Op::Boot,
+        };
+    }
+
+    fn fetch(&self, addr: usize, mode: Mode) -> i64 {
+        match mode {
+            Mode::Pos => self.instructions[self.instructions[addr] as usize],
+            Mode::Imm => self.instructions[addr],
+        }
+    }
+
+    fn store(&mut self, addr: usize, val: i64) {
+        let x = self.instructions[addr] as usize;
+        self.instructions[x] = val;
+    }
+
+    pub fn run(&mut self) {
+        while self.last_op != Op::Stop {
+            self.step();
+        }
+    }
+
+    pub fn step(&mut self) {
+        let op = Op::from_i64(self.instructions[self.pc]);
+        let modes = Mode::from_i64(self.instructions[self.pc]);
+        match op {
+            Op::Add => {
+                let x = self.fetch(self.pc+1, modes[0]);
+                let y = self.fetch(self.pc+2, modes[1]);
+                self.store(self.pc+3, x+y);
+                self.pc += 4;
+            }
+            Op::Mul => {
+                let x = self.fetch(self.pc+1, modes[0]);
+                let y = self.fetch(self.pc+2, modes[1]);
+                self.store(self.pc+3, x*y);
+                self.pc += 4;
+            }
+            Op::In => {
+                self.store(self.pc+1, self.inputs[self.ic]);
+                self.ic += 1;
+                self.pc += 2;
+            }
+            Op::Out => {
+                let x = self.fetch(self.pc+1, modes[0]);
+                self.outputs.push(x);
+                self.pc += 2;
+            }
+            Op::JmpIfTrue => {
+                let x = self.fetch(self.pc+1, modes[0]);
+                let new_pc = self.fetch(self.pc+2, modes[1]);
+                if x != 0 {
+                    self.pc = new_pc as usize;
+                } else {
+                    self.pc += 3;
+                }
+            }
+            Op::JmpIfFalse => {
+                let x = self.fetch(self.pc+1, modes[0]);
+                let new_pc = self.fetch(self.pc+2, modes[1]);
+                if x == 0 {
+                    self.pc = new_pc as usize;
+                } else {
+                    self.pc += 3;
+                }
+            }
+            Op::Lt => {
+                let x = self.fetch(self.pc+1, modes[0]);
+                let y = self.fetch(self.pc+2, modes[1]);
+                self.store(self.pc+3, (x < y) as i64);
+                self.pc += 4;
+            }
+            Op::Eq => {
+                let x = self.fetch(self.pc+1, modes[0]);
+                let y = self.fetch(self.pc+2, modes[1]);
+                self.store(self.pc+3, (x == y) as i64);
+                self.pc += 4;
+            }
+            Op::SetRb => {
+                let incr = self.fetch(self.pc+1, modes[0]);
+                self.rb += incr;
+                self.pc += 2;
+            }
+            Op::Stop => (),
+            Op::Boot => panic!("should never execute Boot op"),
+        }
+        self.last_op = op;
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 enum Mode { Pos, Imm }
 
@@ -18,8 +127,9 @@ impl Mode {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Op {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Op {
+    Boot,
     Stop,
     Add,
     Mul,
@@ -29,6 +139,7 @@ enum Op {
     JmpIfFalse,
     Lt,
     Eq,
+    SetRb,
 }
 
 impl Op {
@@ -42,82 +153,9 @@ impl Op {
             6 => Op::JmpIfFalse,
             7 => Op::Lt,
             8 => Op::Eq,
+            9 => Op::SetRb,
             99 => Op::Stop,
             x => panic!("unknown opcode: {}", x)
-        }
-    }
-}
-
-fn fetch(pc: usize, mode: Mode, instr: &[i64]) -> i64 {
-    match mode {
-        Mode::Pos => instr[instr[pc] as usize],
-        Mode::Imm => instr[pc],
-    }
-}
-
-
-pub fn exec_intcode(instr: &mut [i64], inputs: &[i64], outputs: &mut Vec<i64>) {
-    let mut pc: usize = 0;
-    let mut ic: usize = 0; // input counter
-
-    loop {
-        let op = Op::from_i64(instr[pc]);
-        let modes = Mode::from_i64(instr[pc]);
-        match op {
-            Op::Add => {
-                let x = fetch(pc+1, modes[0], instr);
-                let y = fetch(pc+2, modes[1], instr);
-                instr[instr[pc+3] as usize] = x+y;
-                pc += 4;
-            }
-            Op::Mul => {
-                let x = fetch(pc+1, modes[0], instr);
-                let y = fetch(pc+2, modes[1], instr);
-                instr[instr[pc+3] as usize] = x*y;
-                pc += 4;
-            }
-            Op::In => {
-                let out_addr = instr[pc+1] as usize;
-                instr[out_addr] = inputs[ic];
-                ic += 1;
-                pc += 2;
-            }
-            Op::Out => {
-                let x = fetch(pc+1, modes[0], instr);
-                outputs.push(x);
-                pc += 2;
-            }
-            Op::JmpIfTrue => {
-                let x = fetch(pc+1, modes[0], instr);
-                let new_pc = fetch(pc+2, modes[1], instr);
-                if x != 0 {
-                    pc = new_pc as usize;
-                } else {
-                    pc += 3;
-                }
-            }
-            Op::JmpIfFalse => {
-                let x = fetch(pc+1, modes[0], instr);
-                let new_pc = fetch(pc+2, modes[1], instr);
-                if x == 0 {
-                    pc = new_pc as usize;
-                } else {
-                    pc += 3;
-                }
-            }
-            Op::Lt => {
-                let x = fetch(pc+1, modes[0], instr);
-                let y = fetch(pc+2, modes[1], instr);
-                instr[instr[pc+3] as usize] = (x < y) as i64;
-                pc += 4;
-            }
-            Op::Eq => {
-                let x = fetch(pc+1, modes[0], instr);
-                let y = fetch(pc+2, modes[1], instr);
-                instr[instr[pc+3] as usize] = (x == y) as i64;
-                pc += 4;
-            }
-            Op::Stop => break,
         }
     }
 }
