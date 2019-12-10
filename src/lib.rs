@@ -1,6 +1,6 @@
 pub struct Cpu {
-    pub pc: usize,              // program counter
-    pub ic: usize,              // input counter
+    pub pc: i64,                // program counter
+    pub ic: i64,                // input counter
     pub rb: i64,                // relative base
     pub instructions: Vec<i64>, // instructions
     pub inputs: Vec<i64>,       // inputs, indexed by ic
@@ -21,15 +21,16 @@ impl Cpu {
         };
     }
 
-    fn fetch(&self, addr: usize, mode: Mode) -> i64 {
+    fn fetch(&self, addr: i64, mode: Mode) -> i64 {
         match mode {
-            Mode::Pos => self.instructions[self.instructions[addr] as usize],
-            Mode::Imm => self.instructions[addr],
+            Mode::Pos => self.instructions[self.instructions[addr as usize] as usize],
+            Mode::Imm => self.instructions[addr as usize],
+            Mode::Rel => self.instructions[(self.rb + addr) as usize],
         }
     }
 
-    fn store(&mut self, addr: usize, val: i64) {
-        let x = self.instructions[addr] as usize;
+    fn store(&mut self, addr: i64, val: i64) {
+        let x = self.instructions[addr as usize] as usize;
         self.instructions[x] = val;
     }
 
@@ -40,8 +41,8 @@ impl Cpu {
     }
 
     pub fn step(&mut self) {
-        let op = Op::from_i64(self.instructions[self.pc]);
-        let modes = Mode::from_i64(self.instructions[self.pc]);
+        let op = Op::from_i64(self.instructions[self.pc as usize]);
+        let modes = Mode::from_i64(self.instructions[self.pc as usize]);
         match op {
             Op::Add => {
                 let x = self.fetch(self.pc+1, modes[0]);
@@ -56,7 +57,7 @@ impl Cpu {
                 self.pc += 4;
             }
             Op::In => {
-                self.store(self.pc+1, self.inputs[self.ic]);
+                self.store(self.pc+1, self.inputs[self.ic as usize]);
                 self.ic += 1;
                 self.pc += 2;
             }
@@ -69,7 +70,7 @@ impl Cpu {
                 let x = self.fetch(self.pc+1, modes[0]);
                 let new_pc = self.fetch(self.pc+2, modes[1]);
                 if x != 0 {
-                    self.pc = new_pc as usize;
+                    self.pc = new_pc;
                 } else {
                     self.pc += 3;
                 }
@@ -78,7 +79,7 @@ impl Cpu {
                 let x = self.fetch(self.pc+1, modes[0]);
                 let new_pc = self.fetch(self.pc+2, modes[1]);
                 if x == 0 {
-                    self.pc = new_pc as usize;
+                    self.pc = new_pc;
                 } else {
                     self.pc += 3;
                 }
@@ -108,7 +109,7 @@ impl Cpu {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Mode { Pos, Imm }
+enum Mode { Pos, Imm, Rel }
 
 impl Mode {
     fn from_i64(mut n: i64) -> Vec<Mode> {
@@ -118,6 +119,7 @@ impl Mode {
             let mode = match n % 10 {
                 0 => Mode::Pos,
                 1 => Mode::Imm,
+                2 => Mode::Rel,
                 x => panic!("unknown mode: {}", x),
             };
             modes.push(mode);
